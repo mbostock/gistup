@@ -1,0 +1,134 @@
+#!/usr/bin/env node
+
+var fs = require("fs"),
+    path = require("path"),
+    child = require("child_process"),
+    readline = require("readline"),
+    https = require("https");
+
+var argv = require("optimist").usage("Usage: $0")
+    .options("public", {
+      default: true,
+      describe: "true for public gist; false for secret gist"
+    })
+    .options("private", {
+      default: false,
+      describe: "create a secret gist; equivalent to --no-public"
+    })
+    .options("description", {
+      alias: "m",
+      default: "",
+      describe: "an optional description for your gist"
+    })
+    .options("open", {
+      default: true,
+      describe: "open the created gist in your web browser"
+    })
+    .options("help", {
+      alias: "h",
+      describe: "display this help text"
+    })
+    .check(function(argv) {
+      if (argv.help) throw "";
+      if (argv.private) argv.public = false;
+    })
+    .argv;
+
+var home = process.env.HOME || process.env.HOMEPATH || process.env.USERPROFILE,
+    settingsPath = path.join(home, ".gistup.json"),
+    settings;
+
+try {
+  settings = JSON.parse(fs.readFileSync(settingsPath, "utf8"));
+} catch (error) {
+
+  console.log("Welcome to GISTUP!");
+  console.log("");
+  console.log("Since this is your first time using gistup, we need to create a");
+  console.log("\033[93mGitHub personal access token\033[0m to grant gistup permission to create");
+  console.log("gists on your behalf. You’ll only have to do this once, and you");
+  console.log("can easily revoke this token in the future if desired.");
+  console.log("");
+  console.log("When you press any key to continue, your web browser will open.");
+  console.log("Please login (if needed) and fill out the resulting form to create");
+  console.log("an access token. When you’re done, copy the access token to the");
+  console.log("clipboard and paste it back into the terminal.");
+  console.log("");
+  process.stdout.write("Press any key to open GitHub… ");
+
+  process.stdin.setRawMode(true);
+  process.stdin.resume();
+  process.stdin.once("data", function() {
+    child.exec("open 'https://github.com/settings/tokens/new'", function(error) {
+      if (error) throw error;
+
+      var readin = readline.createInterface({
+        input: process.stdin,
+        output: process.stdout
+      });
+
+      readin.question("GitHub personal access token: ", function(token) {
+        readin.close();
+        token = token.trim().toLowerCase();
+        if (!/^[0-9a-f]{40}$/.test(token)) console.warn("That doesn’t look like a valid access token. Abort!"), process.exit(1);
+        settings = {token: token};
+        fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2), "utf8");
+        ready(settings);
+      });
+    });
+  });
+
+  return;
+}
+
+ready(settings);
+
+function ready(settings) {
+
+  var json = JSON.stringify({
+    "description": argv.description,
+    "public": argv.public,
+    "files": {
+      ".gistup": {
+        "content": "gistup"
+      }
+    }
+  });
+
+  var request = https.request({
+    hostname: "api.github.com",
+    port: 443,
+    path: "/gists",
+    method: "POST",
+    headers: {
+      "Authorization": "token " + settings.token,
+      "User-Agent": "mbostock/gistup",
+      "Content-Type": "application/x-www-form-urlencoded",
+      "Content-Length": json.length
+    }
+  }, function(response) {
+    var chunks = [];
+    response.setEncoding("utf8");
+    response.on("data", function(chunk) { chunks.push(chunk); });
+    response.on("end", function() {
+      var response = JSON.parse(chunks.join("")),
+          id = response.id;
+      if (!id) console.warn("Hmm, gist creation failed. Abort!"), console.warn(JSON.stringify(response, null, 2)), process.exit(1);
+      child.exec("git init && git remote add --track master origin git@gist.github.com:" + id + ".git && git add -A . && git commit --allow-empty -m 'Initial commit.' && git push -f origin master", function(error, stdout, stderr) {
+        if (argv.open) child.exec("open 'https://gist.github.com/" + id + "'", function(error) {
+          if (error) throw error;
+        });
+        if (error) throw error;
+        if (stdout) console.log(stdout);
+        if (stderr) console.warn(stderr);
+      });
+    });
+  });
+
+  request.on("error", function(error) {
+    console.error(error);
+  });
+
+  request.write(json);
+  request.end();
+}

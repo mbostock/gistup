@@ -1,0 +1,30 @@
+{
+  "name": "gistup",
+  "version": "0.0.1",
+  "description": "Initialize a gist from the command-line.",
+  "keywords": [
+    "gist",
+    "github",
+    "git"
+  ],
+  "author": {
+    "name": "Mike Bostock",
+    "url": "http://bost.ocks.org/mike"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mbostock/gistup.git"
+  },
+  "dependencies": {
+    "optimist": "0.3"
+  },
+  "bin": {
+    "gistup": "./bin/gistup"
+  },
+  "licenses": [
+    {
+      "type": "BSD",
+      "url": "https://github.com/mbostock/gistup/blob/master/LICENSE"
+    }
+  ]
+}
