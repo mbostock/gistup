@@ -114,7 +114,7 @@ function ready(settings) {
       var response = JSON.parse(chunks.join("")),
           id = response.id;
       if (!id) console.warn("Hmm, gist creation failed. Abort!"), console.warn(JSON.stringify(response, null, 2)), process.exit(1);
-      child.exec("git init && git remote add --track master origin git@gist.github.com:" + id + ".git && git add -A . && git commit --allow-empty -m 'Initial commit.' && git push -f origin master", function(error, stdout, stderr) {
+      child.exec("git init && git remote add --track master origin git@gist.github.com:" + id + ".git && git add `find . -maxdepth 1 -type f` && git commit --allow-empty -m 'Initial commit.' && git push -f origin master", function(error, stdout, stderr) {
         if (argv.open) child.exec("open 'https://gist.github.com/" + id + "'", function(error) {
           if (error) throw error;
         });
