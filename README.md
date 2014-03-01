@@ -22,7 +22,7 @@ If you want to update your gist later, just use git:
 
 ```bash
 edit index.html
-git commit -m 'Made some awesome changes'.
+git commit -m 'Made some awesome changes.'
 git push
 ```
 
