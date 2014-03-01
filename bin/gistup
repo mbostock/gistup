@@ -72,7 +72,7 @@ try {
         token = token.trim().toLowerCase();
         if (!/^[0-9a-f]{40}$/.test(token)) console.warn("That doesn’t look like a valid access token. Abort!"), process.exit(1);
         settings = {token: token};
-        fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2), "utf8");
+        fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2), {mode: parseInt("0600", 8)});
         ready(settings);
       });
     });
