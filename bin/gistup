@@ -1,10 +1,13 @@
 #!/usr/bin/env node
 
 var fs = require("fs"),
+    os = require("os"),
     path = require("path"),
     child = require("child_process"),
     readline = require("readline"),
     https = require("https");
+
+var queue = require("queue-async");
 
 var argv = require("optimist").usage("Usage: $0")
     .options("public", {
@@ -34,64 +37,129 @@ var argv = require("optimist").usage("Usage: $0")
     })
     .argv;
 
-var home = process.env.HOME || process.env.HOMEPATH || process.env.USERPROFILE,
-    settingsPath = path.join(home, ".gistup.json"),
-    settings;
+(function main() {
+  var settings,
+      files,
+      id;
 
-try {
-  settings = JSON.parse(fs.readFileSync(settingsPath, "utf8"));
-} catch (error) {
+  queue(1)
+      .defer(function(callback) { getSettings(function(error, _settings) { settings = _settings; callback(error); }); })
+      .defer(initializeGitRepository)
+      .defer(verifyRemoteOriginDoesNotExist)
+      .defer(function(callback) { listFilesToAdd(function(error, _files) { files = _files; callback(error); }); })
+      .defer(function(callback) { gitAdd(files, callback); })
+      .defer(gitCommit)
+      .defer(function(callback) { initializeGist(settings.token, function(error, _id) { id = _id; callback(error); }); })
+      .defer(function(callback) { gitRemoteAdd(id, callback); })
+      .defer(gitPush)
+      .defer(function(callback) { openBrowser(id, callback); })
+      .awaitAll(await);
 
-  console.log("Welcome to GISTUP!");
-  console.log("");
-  console.log("Since this is your first time using gistup, we need to create a");
-  console.log("\033[93mGitHub personal access token\033[0m to grant gistup permission to create");
-  console.log("gists on your behalf. You’ll only have to do this once, and you");
-  console.log("can easily revoke this token in the future if desired.");
-  console.log("");
-  console.log("When you press any key to continue, your web browser will open.");
-  console.log("Please login (if needed) and fill out the resulting form to create");
-  console.log("an access token. When you’re done, copy the access token to the");
-  console.log("clipboard and paste it back into the terminal.");
-  console.log("");
-  process.stdout.write("Press any key to open GitHub… ");
+  function await(error) {
+    if (error) throw error;
+  }
+})();
 
-  process.stdin.setRawMode(true);
-  process.stdin.resume();
-  process.stdin.once("data", function() {
-    child.exec("open 'https://github.com/settings/tokens/new'", function(error) {
-      if (error) {
-        argv.open = false;
-        console.log("");
-        console.log("Oops, unable to open your web browser! Please visit this URL:");
-        console.log("");
-        console.log("https://github.com/settings/tokens/new");
-        console.log("");
-      }
+function getSettings(callback) {
+  var home = process.env.HOME || process.env.HOMEPATH || process.env.USERPROFILE,
+      settingsPath = path.join(home, ".gistup.json"),
+      settings;
 
-      var readin = readline.createInterface({
-        input: process.stdin,
-        output: process.stdout
-      });
+  try {
+    settings = JSON.parse(fs.readFileSync(settingsPath, "utf8"));
+  } catch (error) {
 
-      readin.question("GitHub personal access token: ", function(token) {
-        readin.close();
-        token = token.trim().toLowerCase();
-        if (!/^[0-9a-f]{40}$/.test(token)) console.warn("That doesn’t look like a valid access token. Abort!"), process.exit(1);
-        settings = {token: token};
-        fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2), {mode: parseInt("0600", 8)});
-        ready(settings);
+    console.log("Welcome to GISTUP!");
+    console.log("");
+    console.log("Since this is your first time using gistup, we need to create a");
+    console.log("\033[93mGitHub personal access token\033[0m to grant gistup permission to create");
+    console.log("gists on your behalf. You’ll only have to do this once, and you");
+    console.log("can easily revoke this token in the future if desired.");
+    console.log("");
+    console.log("When you press any key to continue, your web browser will open.");
+    console.log("Please login (if needed) and fill out the resulting form to create");
+    console.log("an access token. When you’re done, copy the access token to the");
+    console.log("clipboard and paste it back into the terminal.");
+    console.log("");
+    process.stdout.write("Press any key to open GitHub… ");
+
+    process.stdin.setRawMode(true);
+    process.stdin.resume();
+    process.stdin.once("data", function() {
+      child.exec("open 'https://github.com/settings/tokens/new'", function(error) {
+        if (error) {
+          argv.open = false;
+          console.log("");
+          console.log("Oops, unable to open your web browser! Please visit this URL:");
+          console.log("");
+          console.log("https://github.com/settings/tokens/new");
+          console.log("");
+        }
+
+        var readin = readline.createInterface({
+          input: process.stdin,
+          output: process.stdout
+        });
+
+        readin.question("GitHub personal access token: ", function(token) {
+          readin.close();
+          token = token.trim().toLowerCase();
+          if (!/^[0-9a-f]{40}$/.test(token)) return void callback(new Error("invalid access token: " + token));
+          settings = {token: token};
+          fs.writeFile(settingsPath, JSON.stringify(settings, null, 2), {mode: parseInt("0600", 8)}, function(error) {
+            callback(error, error ? null : settings);
+          });
+        });
       });
     });
-  });
 
-  return;
+    return;
+  }
+
+  callback(null, settings);
 }
 
-ready(settings);
+function initializeGitRepository(callback) {
+  child.exec("git init", function(error, stdout, stderr) {
+    if (stdout) process.stdout.write(stdout);
+    if (stderr) process.stderr.write(stderr), error = new Error("git init failed.");
+    if (error) throw error;
+    callback(error);
+  });
+}
 
-function ready(settings) {
+function verifyRemoteOriginDoesNotExist(callback) {
+  child.exec("git remote", function(error, stdout, stderr) {
+    if (stderr) process.stderr.write(stderr), error = new Error("git remote failed.");
+    if (!error && stdout.trim().split(os.EOL).indexOf("origin") >= 0) error = new Error("the remote \"origin\" already exists.");
+    callback(error);
+  });
+}
 
+function listFilesToAdd(callback) {
+  child.exec("git ls-files ls-files --others --exclude-standard --directory -x '*/'", function(error, stdout, stderr) {
+    if (stderr) process.stderr.write(stderr), error = new Error("git ls-files failed.");
+    callback(error, error ? null : stdout.split(os.EOL));
+  });
+}
+
+function gitAdd(files, callback) {
+  child.exec("git add " + files.map(quote).join(" "), function(error, stdout, stderr) {
+    if (stdout) process.stdout.write(stdout);
+    if (stderr) process.stderr.write(stderr), error = new Error("git add failed.");
+    callback(error);
+  });
+}
+
+function gitCommit(callback) {
+  child.exec("git commit --allow-empty -m 'Initial gistup commit.'", function(error, stdout, stderr) {
+    if (stdout) process.stdout.write(stdout);
+    if (stderr) process.stderr.write(stderr), error = new Error("git commit failed.");
+    callback(error);
+  });
+}
+
+function initializeGist(token, callback) {
   var json = JSON.stringify({
     "description": argv.description,
     "public": argv.public,
@@ -108,7 +176,7 @@ function ready(settings) {
     path: "/gists",
     method: "POST",
     headers: {
-      "Authorization": "token " + settings.token,
+      "Authorization": "token " + token,
       "User-Agent": "mbostock/gistup",
       "Content-Type": "application/x-www-form-urlencoded",
       "Content-Length": json.length
@@ -118,24 +186,45 @@ function ready(settings) {
     response.setEncoding("utf8");
     response.on("data", function(chunk) { chunks.push(chunk); });
     response.on("end", function() {
-      var response = JSON.parse(chunks.join("")),
-          id = response.id;
-      if (!id) console.warn("Hmm, gist creation failed. Abort!"), console.warn(JSON.stringify(response, null, 2)), process.exit(1);
-      child.exec("git init && git remote add --track master origin git@gist.github.com:" + id + ".git && git add `find . -maxdepth 1 -type f` && git commit --allow-empty -m 'Initial commit.' && git push -f origin master", function(error, stdout, stderr) {
-        if (argv.open) child.exec("open 'https://gist.github.com/" + id + "'", function(error) {
-          if (error) throw error;
-        });
-        if (error) throw error;
-        if (stdout) console.log(stdout);
-        if (stderr) console.warn(stderr);
-      });
+      var response, id = null, error;
+      try { response = JSON.parse(chunks.join("")); }
+      catch (e) { error = e; }
+      if (!error && !response) error = new Error("empty API response");
+      if (!error && !/^[0-9a-f]+$/i.test(id = response.id)) error = new Error("invalid gist id: " + id); // for safety
+      else console.log("gist " + id + " created!");
+      callback(error, id);
     });
   });
 
-  request.on("error", function(error) {
-    console.error(error);
-  });
-
+  request.on("error", callback);
   request.write(json);
   request.end();
+}
+
+function gitRemoteAdd(id, callback) {
+  child.exec("git remote add --track master origin git@gist.github.com:" + id + ".git", function(error, stdout, stderr) {
+    if (stdout) process.stdout.write(stdout);
+    if (stderr) process.stderr.write(stderr), error = new Error("git remote failed.");
+    callback(error);
+  });
+}
+
+function gitPush(callback) {
+  child.exec("git push -f origin master", function(error, stdout, stderr) {
+    if (stdout) process.stdout.write(stdout);
+    if (stderr) process.stderr.write(stderr);
+    callback(error);
+  });
+}
+
+function openBrowser(id, callback) {
+  if (!argv.open) return void callback(null);
+  child.exec("open 'https://gist.github.com/" + id + "'", function(error, stdout, stderr) {
+    if (stderr) process.stderr.write(stderr); // ignore errors
+    callback(null);
+  });
+}
+
+function quote(name) {
+  return '"' + name.replace(/(["\s'$`\\])/g, "\\$1") + '"';
 }

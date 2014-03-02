@@ -1,6 +1,6 @@
 {
   "name": "gistup",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "Initialize a gist from the command-line.",
   "keywords": [
     "gist",
@@ -16,7 +16,8 @@
     "url": "https://github.com/mbostock/gistup.git"
   },
   "dependencies": {
-    "optimist": "0.3"
+    "optimist": "0.3",
+    "queue-async": "1"
   },
   "bin": {
     "gistup": "./bin/gistup"
