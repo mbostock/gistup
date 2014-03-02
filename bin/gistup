@@ -39,14 +39,14 @@ var argv = require("optimist").usage("Usage: $0")
 
 getSettings(function(error, settings) {
   unless(error)
-      .defer(initializeGitRepository)
-      .defer(verifyRemoteOriginDoesNotExist)
-      .defer(listFilesToAdd)
+      .defer(gitInit)
+      .defer(gitRemoteOriginDoesNotExist)
+      .defer(gitListUntrackedFiles)
       .await(function(error, _, _, files) {
         unless(error)
             .defer(gitAdd, files)
             .defer(gitCommit)
-            .defer(initializeGist, settings.token)
+            .defer(createGist, settings.token)
             .await(function(error, _, _, id) {
               unless(error)
                   .defer(gitRemoteAdd, id)
@@ -121,7 +121,7 @@ function getSettings(callback) {
   callback(null, settings);
 }
 
-function initializeGitRepository(callback) {
+function gitInit(callback) {
   child.exec("git init", function(error, stdout, stderr) {
     if (!error && stderr) process.stderr.write(stderr), error = new Error("git init failed.");
     if (!error && stdout) process.stdout.write(stdout);
@@ -129,7 +129,7 @@ function initializeGitRepository(callback) {
   });
 }
 
-function verifyRemoteOriginDoesNotExist(callback) {
+function gitRemoteOriginDoesNotExist(callback) {
   child.exec("git remote", function(error, stdout, stderr) {
     if (!error && stderr) process.stderr.write(stderr), error = new Error("git remote failed.");
     if (!error && stdout.trim().split(os.EOL).indexOf("origin") >= 0) error = new Error("the remote \"origin\" already exists.");
@@ -137,7 +137,7 @@ function verifyRemoteOriginDoesNotExist(callback) {
   });
 }
 
-function listFilesToAdd(callback) {
+function gitListUntrackedFiles(callback) {
   child.exec("git ls-files ls-files --others --exclude-standard --directory -x '*/'", function(error, stdout, stderr) {
     if (!error && stderr) process.stderr.write(stderr), error = new Error("git ls-files failed.");
     callback(error, error ? null : stdout.split(os.EOL));
@@ -160,7 +160,7 @@ function gitCommit(callback) {
   });
 }
 
-function initializeGist(token, callback) {
+function createGist(token, callback) {
   var json = JSON.stringify({
     "description": argv.description,
     "public": argv.public,
