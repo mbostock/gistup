@@ -27,6 +27,10 @@ var argv = require("optimist").usage("Usage: $0")
       default: true,
       describe: "open the created gist in your web browser"
     })
+    .options("version", {
+      default: false,
+      describe: "print the current version"
+    })
     .options("help", {
       alias: "h",
       describe: "display this help text"
@@ -34,6 +38,7 @@ var argv = require("optimist").usage("Usage: $0")
     .check(function(argv) {
       if (argv.help) throw "";
       if (argv.private) argv.public = false;
+      if (argv.version) console.log(require("../package.json").version), process.exit(0);
     })
     .argv;
 
