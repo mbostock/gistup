@@ -46,6 +46,7 @@ Arguments:
 * --private, --no-public - make a secret gist
 * --no-open - don’t open the created gist in your web browser when done
 * --help - show some help
+* --version - print the current version of gistup
 
 ## Troubleshooting
 
