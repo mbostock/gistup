@@ -22,7 +22,7 @@ This will upload all files in the current directory to your new gist. If you jus
 gistup index.html
 ```
 
-Note that if you specify options, such as to create a private gist, you’ll need to separate files from options with a double-dash (--), like this:
+If you any specify options, such as a private gist, you must separate files from options with a double-dash (--) like this:
 
 ```bash
 gistup --private -- index.html
