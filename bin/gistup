@@ -37,28 +37,30 @@ var argv = require("optimist").usage("Usage: $0")
     })
     .argv;
 
-(function main() {
-  var settings,
-      files,
-      id;
-
-  queue(1)
-      .defer(function(callback) { getSettings(function(error, _settings) { settings = _settings; callback(error); }); })
+getSettings(function(error, settings) {
+  unless(error)
       .defer(initializeGitRepository)
       .defer(verifyRemoteOriginDoesNotExist)
-      .defer(function(callback) { listFilesToAdd(function(error, _files) { files = _files; callback(error); }); })
-      .defer(function(callback) { gitAdd(files, callback); })
-      .defer(gitCommit)
-      .defer(function(callback) { initializeGist(settings.token, function(error, _id) { id = _id; callback(error); }); })
-      .defer(function(callback) { gitRemoteAdd(id, callback); })
-      .defer(gitPush)
-      .defer(function(callback) { openBrowser(id, callback); })
-      .awaitAll(await);
+      .defer(listFilesToAdd)
+      .await(function(error, _, _, files) {
+        unless(error)
+            .defer(gitAdd, files)
+            .defer(gitCommit)
+            .defer(initializeGist, settings.token)
+            .await(function(error, _, _, id) {
+              unless(error)
+                  .defer(gitRemoteAdd, id)
+                  .defer(gitPush)
+                  .defer(openBrowser, id)
+                  .await(unless);
+            });
+      });
+});
 
-  function await(error) {
-    if (error) throw error;
-  }
-})();
+function unless(error) {
+  if (error) throw error;
+  return queue(1);
+}
 
 function getSettings(callback) {
   var home = process.env.HOME || process.env.HOMEPATH || process.env.USERPROFILE,
