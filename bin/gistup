@@ -60,7 +60,14 @@ try {
   process.stdin.resume();
   process.stdin.once("data", function() {
     child.exec("open 'https://github.com/settings/tokens/new'", function(error) {
-      if (error) throw error;
+      if (error) {
+        argv.open = false;
+        console.log("");
+        console.log("Oops, unable to open your web browser! Please visit this URL:");
+        console.log("");
+        console.log("https://github.com/settings/tokens/new");
+        console.log("");
+      }
 
       var readin = readline.createInterface({
         input: process.stdin,
