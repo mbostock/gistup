@@ -37,25 +37,24 @@ var argv = require("optimist").usage("Usage: $0")
     })
     .argv;
 
-getSettings(function(error, settings) {
-  unless(error)
-      .defer(gitInit)
-      .defer(gitRemoteOriginDoesNotExist)
-      .defer(gitListUntrackedFiles)
-      .await(function(error, _, _, files) {
-        unless(error)
-            .defer(gitAdd, files)
-            .defer(gitCommit)
-            .defer(createGist, settings.token)
-            .await(function(error, _, _, id) {
-              unless(error)
-                  .defer(gitRemoteAdd, id)
-                  .defer(gitPush)
-                  .defer(openBrowser, id)
-                  .await(unless);
-            });
-      });
-});
+queue(1)
+    .defer(getSettings)
+    .defer(gitInit)
+    .defer(gitRemoteOriginDoesNotExist)
+    .defer(gitListUntrackedFiles)
+    .await(function(error, settings, _, _, files) {
+      unless(error)
+          .defer(gitAdd, files)
+          .defer(gitCommit)
+          .defer(createGist, settings.token)
+          .await(function(error, _, _, id) {
+            unless(error)
+                .defer(gitRemoteAdd, id)
+                .defer(gitPush)
+                .defer(openBrowser, id)
+                .await(unless);
+          });
+    });
 
 function unless(error) {
   if (error) throw error;
