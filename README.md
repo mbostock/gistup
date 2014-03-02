@@ -56,4 +56,4 @@ If you’re unable to follow the first-time setup to create a personal access to
 }
 ```
 
-Replace the numbers 0123456789012345678901234567890123456789 with your access token and save.
+Replace the numbers 0123456789… with your access token and save.
