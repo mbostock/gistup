@@ -39,7 +39,7 @@ Arguments:
 
 If you see the following error:
 
-```bash
+```
 Error: Command filed: Permission denied (publickey).
 fatal: Could not read from remote repository.
 
