@@ -123,16 +123,15 @@ function getSettings(callback) {
 
 function initializeGitRepository(callback) {
   child.exec("git init", function(error, stdout, stderr) {
-    if (stdout) process.stdout.write(stdout);
-    if (stderr) process.stderr.write(stderr), error = new Error("git init failed.");
-    if (error) throw error;
+    if (!error && stderr) process.stderr.write(stderr), error = new Error("git init failed.");
+    if (!error && stdout) process.stdout.write(stdout);
     callback(error);
   });
 }
 
 function verifyRemoteOriginDoesNotExist(callback) {
   child.exec("git remote", function(error, stdout, stderr) {
-    if (stderr) process.stderr.write(stderr), error = new Error("git remote failed.");
+    if (!error && stderr) process.stderr.write(stderr), error = new Error("git remote failed.");
     if (!error && stdout.trim().split(os.EOL).indexOf("origin") >= 0) error = new Error("the remote \"origin\" already exists.");
     callback(error);
   });
@@ -140,23 +139,23 @@ function verifyRemoteOriginDoesNotExist(callback) {
 
 function listFilesToAdd(callback) {
   child.exec("git ls-files ls-files --others --exclude-standard --directory -x '*/'", function(error, stdout, stderr) {
-    if (stderr) process.stderr.write(stderr), error = new Error("git ls-files failed.");
+    if (!error && stderr) process.stderr.write(stderr), error = new Error("git ls-files failed.");
     callback(error, error ? null : stdout.split(os.EOL));
   });
 }
 
 function gitAdd(files, callback) {
   child.exec("git add " + files.map(quote).join(" "), function(error, stdout, stderr) {
-    if (stdout) process.stdout.write(stdout);
-    if (stderr) process.stderr.write(stderr), error = new Error("git add failed.");
+    if (!error && stderr) process.stderr.write(stderr), error = new Error("git add failed.");
+    if (!error && stdout) process.stdout.write(stdout);
     callback(error);
   });
 }
 
 function gitCommit(callback) {
   child.exec("git commit --allow-empty -m 'Initial gistup commit.'", function(error, stdout, stderr) {
-    if (stdout) process.stdout.write(stdout);
-    if (stderr) process.stderr.write(stderr), error = new Error("git commit failed.");
+    if (!error && stderr) process.stderr.write(stderr), error = new Error("git commit failed.");
+    if (!error && stdout) process.stdout.write(stdout);
     callback(error);
   });
 }
@@ -193,7 +192,7 @@ function initializeGist(token, callback) {
       catch (e) { error = e; }
       if (!error && !response) error = new Error("empty API response");
       if (!error && !/^[0-9a-f]+$/i.test(id = response.id)) error = new Error("invalid gist id: " + id); // for safety
-      else console.log("gist " + id + " created!");
+      if (!error) console.log("gist " + id + " created!");
       callback(error, id);
     });
   });
@@ -205,16 +204,16 @@ function initializeGist(token, callback) {
 
 function gitRemoteAdd(id, callback) {
   child.exec("git remote add --track master origin git@gist.github.com:" + id + ".git", function(error, stdout, stderr) {
-    if (stdout) process.stdout.write(stdout);
-    if (stderr) process.stderr.write(stderr), error = new Error("git remote failed.");
+    if (!error && stderr) process.stderr.write(stderr), error = new Error("git remote failed.");
+    if (!error && stdout) process.stdout.write(stdout);
     callback(error);
   });
 }
 
 function gitPush(callback) {
   child.exec("git push -f origin master", function(error, stdout, stderr) {
-    if (stdout) process.stdout.write(stdout);
-    if (stderr) process.stderr.write(stderr);
+    if (!error && stderr) process.stderr.write(stderr); // ignore warnings
+    if (!error && stdout) process.stdout.write(stdout);
     callback(error);
   });
 }
@@ -222,7 +221,7 @@ function gitPush(callback) {
 function openBrowser(id, callback) {
   if (!argv.open) return void callback(null);
   child.exec("open 'https://gist.github.com/" + id + "'", function(error, stdout, stderr) {
-    if (stderr) process.stderr.write(stderr); // ignore errors
+    if (!error && stderr) process.stderr.write(stderr); // ignore errors
     callback(null);
   });
 }
