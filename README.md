@@ -40,7 +40,7 @@ Arguments:
 If you see the following error:
 
 ```
-Error: Command filed: Permission denied (publickey).
+Error: Command failed: Permission denied (publickey).
 fatal: Could not read from remote repository.
 
 Please make sure you have the correct access rights and the repository exists.
