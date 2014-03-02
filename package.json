@@ -26,5 +26,8 @@
       "type": "BSD",
       "url": "https://github.com/mbostock/gistup/blob/master/LICENSE"
     }
-  ]
+  ],
+  "engines": {
+    "node": ">=0.10"
+  }
 }
