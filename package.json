@@ -1,6 +1,6 @@
 {
   "name": "gistup",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "description": "Initialize a gist from the command-line.",
   "keywords": [
     "gist",
