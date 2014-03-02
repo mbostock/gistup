@@ -12,11 +12,13 @@ The first time you run gistup, you’ll be prompted to create a GitHub *personal
 
 ## Usage
 
+To upload all files in the current directory to your new gist:
+
 ```bash
 gistup
 ```
 
-This will upload all files in the current directory to your new gist. If you just want to create a gist from a single file, try this instead:
+If you just want to create a gist from a single file, try this instead:
 
 ```bash
 gistup index.html
