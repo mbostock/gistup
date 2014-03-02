@@ -9,14 +9,19 @@ var fs = require("fs"),
 
 var queue = require("queue-async");
 
-var argv = require("optimist").usage("Usage: $0")
+var argv = require("optimist").usage("Usage: \033[1mgistup\033[0m [options] -- [file …]\n\n"
+
++ "Version: " + require("../package.json").version + "\n\n"
+
++ "Uploads the specified files to create a new Gist. If no files are specified,\n"
++ "all files in the current directory are uploaded.")
     .options("public", {
       default: true,
-      describe: "true for public gist; false for secret gist"
+      describe: "true for a public gist; false for a secret one"
     })
     .options("private", {
       default: false,
-      describe: "create a secret gist; equivalent to --no-public"
+      describe: "alias for --no-public"
     })
     .options("description", {
       alias: "m",
@@ -29,11 +34,11 @@ var argv = require("optimist").usage("Usage: $0")
     })
     .options("version", {
       default: false,
-      describe: "print the current version"
+      describe: "print the current version of gistup"
     })
     .options("help", {
       alias: "h",
-      describe: "display this help text"
+      describe: "display this useful message"
     })
     .check(function(argv) {
       if (argv.help) throw "";
@@ -142,6 +147,7 @@ function gitRemoteOriginDoesNotExist(callback) {
 }
 
 function gitListUntrackedFiles(callback) {
+  if (argv._.length) return void callback(null, argv._);
   child.exec("git ls-files ls-files --others --exclude-standard --directory -x '*/'", function(error, stdout, stderr) {
     if (!error && stderr) process.stderr.write(stderr), error = new Error("git ls-files failed.");
     callback(error, error ? null : stdout.split(os.EOL));
