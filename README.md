@@ -16,7 +16,17 @@ The first time you run gistup, you’ll be prompted to create a GitHub *personal
 gistup
 ```
 
-This will upload all files in the current directory to your new gist.
+This will upload all files in the current directory to your new gist. If you just want to create a gist from a single file, try this instead:
+
+```bash
+gistup index.html
+```
+
+Note that if you specify options, such as to create a private gist, you’ll need to separate files from options with a double-dash (--), like this:
+
+```bash
+gistup --private -- index.html
+```
 
 If you want to update your gist later, just use git:
 
