@@ -34,8 +34,8 @@ var argv = require("optimist").usage("Usage: \033[1mgistup\033[0m [options] -- [
       describe: "request confirmation of every file before adding"
     })
     .options("open", {
-      default: true,
-      describe: "open the created gist in your web browser"
+      default: "https://gist.github.com/",
+      describe: "URL to open in your web browser after creating gist"
     })
     .options("remote", {
       default: "origin",
@@ -268,7 +268,7 @@ function gitPush(callback) {
 
 function openBrowser(id, callback) {
   if (!argv.open) return void callback(null);
-  child.exec("open 'https://gist.github.com/" + id + "'", function(error, stdout, stderr) {
+  child.exec("open " + quote(argv.open) + id, function(error, stdout, stderr) {
     if (!error && stderr) process.stderr.write(stderr); // ignore errors
     callback(null);
   });
