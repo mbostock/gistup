@@ -58,8 +58,6 @@ queue.then(function() {
       .defer(gitInit)
       .defer(gitRemoteOriginDoesNotExist)
       .defer(gitListUntrackedFiles);
-}, function(error) {
-  throw error;
 }).then(function(settings, _, _, files) {
   return queue(1)
       .defer(confirmFiles, files)
