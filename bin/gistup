@@ -28,6 +28,11 @@ var argv = require("optimist").usage("Usage: \033[1mgistup\033[0m [options] -- [
       default: "",
       describe: "an optional description for your gist"
     })
+    .options("interactive", {
+      alias: "i",
+      default: false,
+      describe: "request confirmation of every file before adding"
+    })
     .options("open", {
       default: true,
       describe: "open the created gist in your web browser"
@@ -54,10 +59,11 @@ queue(1)
     .defer(gitListUntrackedFiles)
     .await(function(error, settings, _, _, files) {
       unless(error)
+          .defer(confirmFiles, files)
           .defer(gitAdd, files)
           .defer(gitCommit)
           .defer(createGist, settings.token)
-          .await(function(error, _, _, id) {
+          .await(function(error, _, _, _, id) {
             unless(error)
                 .defer(gitRemoteAdd, id)
                 .defer(gitPush)
@@ -148,10 +154,37 @@ function gitRemoteOriginDoesNotExist(callback) {
 
 function gitListUntrackedFiles(callback) {
   if (argv._.length) return void callback(null, argv._);
-  child.exec("git ls-files ls-files --others --exclude-standard --directory -x '*/'", function(error, stdout, stderr) {
+  child.exec("git ls-files --others --exclude-standard --directory -x '*/'", function(error, stdout, stderr) {
     if (!error && stderr) process.stderr.write(stderr), error = new Error("git ls-files failed.");
-    callback(error, error ? null : stdout.split(os.EOL));
+    callback(error, error ? null : stdout.trim().split(os.EOL));
   });
+}
+
+function confirmFiles(files, callback) {
+  if (!argv.interactive) return void callback(null);
+  var readin = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout
+  });
+
+  var q = queue(1);
+
+  files.forEach(function(file, index) {
+    q.defer(confirmFile, file, index);
+  });
+
+  q.awaitAll(function(error) {
+    readin.close();
+    callback(error);
+  });
+
+  function confirmFile(file, index, callback) {
+    readin.question("add " + file + "? ", function(answer) {
+      if (/^y|yes$/i.test(answer)) return void callback(null);
+      if (/^n|no$/i.test(answer)) return files.splice(index, 1), void callback(null);
+      confirmFile(file, index, callback);
+    });
+  }
 }
 
 function gitAdd(files, callback) {
