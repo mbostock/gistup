@@ -37,6 +37,10 @@ var argv = require("optimist").usage("Usage: \033[1mgistup\033[0m [options] -- [
       default: true,
       describe: "open the created gist in your web browser"
     })
+    .options("remote", {
+      default: "origin",
+      describe: "name of the git remote"
+    })
     .options("version", {
       default: false,
       describe: "print the current version of gistup"
@@ -55,7 +59,7 @@ var argv = require("optimist").usage("Usage: \033[1mgistup\033[0m [options] -- [
 queue(1)
     .defer(getSettings)
     .defer(gitInit)
-    .defer(gitRemoteOriginDoesNotExist)
+    .defer(gitRemoteDoesNotExist)
     .defer(gitListUntrackedFiles)
     .await(function(error, settings, _, _, files) {
       unless(error)
@@ -144,10 +148,10 @@ function gitInit(callback) {
   });
 }
 
-function gitRemoteOriginDoesNotExist(callback) {
+function gitRemoteDoesNotExist(callback) {
   child.exec("git remote", function(error, stdout, stderr) {
     if (!error && stderr) process.stderr.write(stderr), error = new Error("git remote failed.");
-    if (!error && stdout.trim().split(os.EOL).indexOf("origin") >= 0) error = new Error("the remote \"origin\" already exists.");
+    if (!error && stdout.trim().split(os.EOL).indexOf(argv.remote) >= 0) error = new Error("the remote \"" + argv.remote + "\" already exists.");
     callback(error);
   });
 }
@@ -247,7 +251,7 @@ function createGist(token, callback) {
 }
 
 function gitRemoteAdd(id, callback) {
-  child.exec("git remote add --track master origin git@gist.github.com:" + id + ".git", function(error, stdout, stderr) {
+  child.exec("git remote add --track master " + quote(argv.remote) + " git@gist.github.com:" + id + ".git", function(error, stdout, stderr) {
     if (!error && stderr) process.stderr.write(stderr), error = new Error("git remote failed.");
     if (!error && stdout) process.stdout.write(stdout);
     callback(error);
@@ -255,7 +259,7 @@ function gitRemoteAdd(id, callback) {
 }
 
 function gitPush(callback) {
-  child.exec("git push -fu origin master", function(error, stdout, stderr) {
+  child.exec("git push -fu " + quote(argv.remote) + " master", function(error, stdout, stderr) {
     if (!error && stderr) process.stderr.write(stderr); // ignore warnings
     if (!error && stdout) process.stdout.write(stdout);
     callback(error);
