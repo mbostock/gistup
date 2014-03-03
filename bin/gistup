@@ -188,6 +188,7 @@ function confirmFiles(files, callback) {
 }
 
 function gitAdd(files, callback) {
+  if (!files.length) return void callback(null);
   child.exec("git add " + files.map(quote).join(" "), function(error, stdout, stderr) {
     if (!error && stderr) process.stderr.write(stderr), error = new Error("git add failed.");
     if (!error && stdout) process.stdout.write(stdout);
