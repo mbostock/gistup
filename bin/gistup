@@ -255,7 +255,7 @@ function gitRemoteAdd(id, callback) {
 }
 
 function gitPush(callback) {
-  child.exec("git push -f origin master", function(error, stdout, stderr) {
+  child.exec("git push -fu origin master", function(error, stdout, stderr) {
     if (!error && stderr) process.stderr.write(stderr); // ignore warnings
     if (!error && stdout) process.stdout.write(stdout);
     callback(error);
