@@ -52,30 +52,26 @@ var argv = require("optimist").usage("Usage: \033[1mgistup\033[0m [options] -- [
     })
     .argv;
 
-queue(1)
-    .defer(getSettings)
-    .defer(gitInit)
-    .defer(gitRemoteOriginDoesNotExist)
-    .defer(gitListUntrackedFiles)
-    .await(function(error, settings, _, _, files) {
-      unless(error)
-          .defer(confirmFiles, files)
-          .defer(gitAdd, files)
-          .defer(gitCommit)
-          .defer(createGist, settings.token)
-          .await(function(error, _, _, _, id) {
-            unless(error)
-                .defer(gitRemoteAdd, id)
-                .defer(gitPush)
-                .defer(openBrowser, id)
-                .await(unless);
-          });
-    });
-
-function unless(error) {
-  if (error) throw error;
-  return queue(1);
-}
+queue.then(function() {
+  return queue(1)
+      .defer(getSettings)
+      .defer(gitInit)
+      .defer(gitRemoteOriginDoesNotExist)
+      .defer(gitListUntrackedFiles);
+}, function(error) {
+  throw error;
+}).then(function(settings, _, _, files) {
+  return queue(1)
+      .defer(confirmFiles, files)
+      .defer(gitAdd, files)
+      .defer(gitCommit)
+      .defer(createGist, settings.token);
+}).then(function(_, _, _, id) {
+  return queue(1)
+      .defer(gitRemoteAdd, id)
+      .defer(gitPush)
+      .defer(openBrowser, id);
+});
 
 function getSettings(callback) {
   var home = process.env.HOME || process.env.HOMEPATH || process.env.USERPROFILE,
