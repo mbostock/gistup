@@ -9,11 +9,11 @@ var fs = require("fs"),
 
 var queue = require("queue-async");
 
-var argv = require("optimist").usage("Usage: \033[1mgistup\033[0m [options] -- [file …]\n\n"
+var argv = require("optimist").usage("Usage: \033[1mgistup\033[0m [options] -- [file …]" + os.EOL + os.EOL
 
-+ "Version: " + require("../package.json").version + "\n\n"
++ "Version: " + require("../package.json").version + os.EOL + os.EOL
 
-+ "Uploads the specified files to create a new Gist. If no files are specified,\n"
++ "Uploads the specified files to create a new Gist. If no files are specified," + os.EOL
 + "all files in the current directory are uploaded.")
     .options("public", {
       default: true,
@@ -77,7 +77,13 @@ queue(1)
     });
 
 function unless(error) {
-  if (error) throw error;
+  if (error) {
+    if (error.type === UserError) {
+      console.warn(os.EOL + "\033[91mERROR:\033[0m " + error.message);
+      process.exit(1);
+    }
+    throw error;
+  }
   return queue(1);
 }
 
@@ -93,7 +99,7 @@ function getSettings(callback) {
     console.log("Welcome to GISTUP!");
     console.log("");
     console.log("Since this is your first time using gistup, we need to create a");
-    console.log("\033[93mGitHub personal access token\033[0m to grant gistup permission to create");
+    console.log("GitHub \033[93mpersonal access token\033[0m to grant gistup permission to create");
     console.log("gists on your behalf. You’ll only have to do this once, and you");
     console.log("can easily revoke this token in the future if desired.");
     console.log("");
@@ -122,10 +128,10 @@ function getSettings(callback) {
           output: process.stdout
         });
 
-        readin.question("GitHub personal access token: ", function(token) {
+        readin.question("Enter personal access token: ", function(token) {
           readin.close();
           token = token.trim().toLowerCase();
-          if (!/^[0-9a-f]{40}$/.test(token)) return void callback(new Error("invalid access token: " + token));
+          if (!/^[0-9a-f]{40}$/.test(token)) return void callback(new UserError("The access token \"" + token + "\" is invalid." + os.EOL + os.EOL + "Did you copy and paste the access token correctly? It should be a" + os.EOL + "forty-character hexadecimal string. Please fix and try again."));
           settings = {token: token};
           fs.writeFile(settingsPath, JSON.stringify(settings, null, 2), {mode: parseInt("0600", 8)}, function(error) {
             callback(error, error ? null : settings);
@@ -149,9 +155,9 @@ function gitInit(callback) {
 }
 
 function gitRemoteDoesNotExist(callback) {
-  child.exec("git remote", function(error, stdout, stderr) {
-    if (!error && stderr) process.stderr.write(stderr), error = new Error("git remote failed.");
-    if (!error && stdout.trim().split(os.EOL).indexOf(argv.remote) >= 0) error = new Error("the remote \"" + argv.remote + "\" already exists.");
+  child.exec("git config --get remote." + quote(argv.remote) + ".url || true", function(error, stdout, stderr) {
+    if (!error && stderr) process.stderr.write(stderr), error = new Error("git config failed.");
+    if (!error && stdout) error = new UserError("the remote \"" + argv.remote + "\" already exists." + os.EOL + os.EOL + "Are you trying to run gistup in a directory that already has a git" + os.EOL + "repository? This would overwrite your existing remote, which points to:" + os.EOL + os.EOL + "  " + stdout + os.EOL + "If you’ve previously run gistup in this directory and you want to update" + os.EOL + "your gist, just push to the existing git remote:" + os.EOL + os.EOL + "  git push" + os.EOL + os.EOL + "Or, if you don’t need this remote anymore, remove it and gistup will" + os.EOL + "replace it with a new one the next time you run it:" + os.EOL + os.EOL + "  git remote rm " + argv.remote + os.EOL + os.EOL + "Lastly, you can also specify a different remote name for gistup, so that" + os.EOL + "you can push to multiple git remotes:" + os.EOL + os.EOL + "  gistup --origin=gist" + os.EOL + os.EOL + "Please fix and try again.");
     callback(error);
   });
 }
@@ -276,4 +282,10 @@ function openBrowser(id, callback) {
 
 function quote(name) {
   return '"' + name.replace(/(["\s'$`\\])/g, "\\$1") + '"';
+}
+
+function UserError(message) {
+  var error = new Error(message);
+  error.type = UserError;
+  return error;
 }
