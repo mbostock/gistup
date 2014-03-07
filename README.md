@@ -2,6 +2,8 @@
 
 Create a gist from the command line! Then just use git to update it.
 
+For more, read the tutorial: [Let’s Make a Block](http://bost.ocks.org/mike/block/).
+
 ## Installation
 
 ```bash
