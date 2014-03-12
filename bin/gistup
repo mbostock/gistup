@@ -231,6 +231,7 @@ function createGist(token, callback) {
     path: "/gists",
     method: "POST",
     headers: {
+      "Accept": "application/vnd.github.v3+json",
       "Authorization": "token " + token,
       "User-Agent": "mbostock/gistup",
       "Content-Type": "application/x-www-form-urlencoded",
