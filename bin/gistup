@@ -283,7 +283,6 @@ function openBrowser(id, callback) {
 }
 
 function escape(description) {
-  return description;
   return description.replace(/[\u007f-\uffff]/g, function(c) {
     return "\\u" + ("0000" + c.charCodeAt(0).toString(16)).slice(-4);
   });
