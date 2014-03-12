@@ -282,14 +282,14 @@ function openBrowser(id, callback) {
   });
 }
 
-function escape(description) {
-  return description.replace(/[\u007f-\uffff]/g, function(c) {
-    return "\\u" + ("0000" + c.charCodeAt(0).toString(16)).slice(-4);
+function escape(string) {
+  return string.replace(/[\u007f-\uffff]/g, function(character) {
+    return "\\u" + ("0000" + character.charCodeAt(0).toString(16)).slice(-4);
   });
 }
 
-function quote(name) {
-  return '"' + name.replace(/(["\s'$`\\])/g, "\\$1") + '"';
+function quote(string) {
+  return '"' + string.replace(/(["\s'$`\\])/g, "\\$1") + '"';
 }
 
 function UserError(message) {
