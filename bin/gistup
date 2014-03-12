@@ -215,7 +215,7 @@ function gitCommit(callback) {
 }
 
 function createGist(token, callback) {
-  var json = JSON.stringify({
+  var json = escape(JSON.stringify({
     "description": argv.description,
     "public": argv.public,
     "files": {
@@ -223,7 +223,7 @@ function createGist(token, callback) {
         "content": "gistup"
       }
     }
-  });
+  }));
 
   var request = https.request({
     hostname: "api.github.com",
@@ -234,7 +234,7 @@ function createGist(token, callback) {
       "Accept": "application/vnd.github.v3+json",
       "Authorization": "token " + token,
       "User-Agent": "mbostock/gistup",
-      "Content-Type": "application/x-www-form-urlencoded",
+      "Content-Type": "application/json;charset=utf8",
       "Content-Length": json.length
     }
   }, function(response) {
@@ -248,6 +248,7 @@ function createGist(token, callback) {
       if (!error && !response) error = new Error("empty API response");
       if (!error && !/^[0-9a-f]+$/i.test(id = response.id)) error = new Error("invalid gist id: " + id); // for safety
       if (!error) console.log("gist " + id + " created!");
+      else console.warn(os.EOL + chunks.join(""));
       callback(error, id);
     });
   });
@@ -278,6 +279,13 @@ function openBrowser(id, callback) {
   child.exec("open " + quote(argv.open) + id, function(error, stdout, stderr) {
     if (!error && stderr) process.stderr.write(stderr); // ignore errors
     callback(null);
+  });
+}
+
+function escape(description) {
+  return description;
+  return description.replace(/[\u007f-\uffff]/g, function(c) {
+    return "\\u" + ("0000" + c.charCodeAt(0).toString(16)).slice(-4);
   });
 }
 
