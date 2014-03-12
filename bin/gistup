@@ -33,6 +33,11 @@ var argv = require("optimist").usage("Usage: \033[1mgistup\033[0m [options] -- [
       default: false,
       describe: "request confirmation of every file before adding"
     })
+    .options("exclude", {
+      alias: "x",
+      default: ".DS_Store",
+      describe: "skip files matching pattern; may use wildcards"
+    })
     .options("open", {
       default: "https://gist.github.com/",
       describe: "URL to open in your web browser after creating gist"
@@ -53,6 +58,8 @@ var argv = require("optimist").usage("Usage: \033[1mgistup\033[0m [options] -- [
       if (argv.help) throw "";
       if (argv.private) argv.public = false;
       if (argv.version) console.log(require("../package.json").version), process.exit(0);
+      if (argv.exclude === false) argv.exclude = [];
+      else if (!Array.isArray(argv.exclude)) argv.exclude = [argv.exclude];
     })
     .argv;
 
@@ -155,7 +162,7 @@ function gitInit(callback) {
 }
 
 function gitRemoteDoesNotExist(callback) {
-  child.exec("git config --get remote." + quote(argv.remote) + ".url || true", function(error, stdout, stderr) {
+  child.exec("git config --get remote." + singlequote(argv.remote) + ".url || true", function(error, stdout, stderr) {
     if (!error && stderr) process.stderr.write(stderr), error = new Error("git config failed.");
     if (!error && stdout) error = new UserError("the remote \"" + argv.remote + "\" already exists." + os.EOL + os.EOL + "Are you trying to run gistup in a directory that already has a git" + os.EOL + "repository? This would overwrite your existing remote, which points to:" + os.EOL + os.EOL + "  " + stdout + os.EOL + "If you’ve previously run gistup in this directory and you want to update" + os.EOL + "your gist, just push to the existing git remote:" + os.EOL + os.EOL + "  git push" + os.EOL + os.EOL + "Or, if you don’t need this remote anymore, remove it and gistup will" + os.EOL + "replace it with a new one the next time you run it:" + os.EOL + os.EOL + "  git remote rm " + argv.remote + os.EOL + os.EOL + "Lastly, you can also specify a different remote name for gistup, so that" + os.EOL + "you can push to multiple git remotes:" + os.EOL + os.EOL + "  gistup --origin=gist" + os.EOL + os.EOL + "Please fix and try again.");
     callback(error);
@@ -164,9 +171,9 @@ function gitRemoteDoesNotExist(callback) {
 
 function gitListUntrackedFiles(callback) {
   if (argv._.length) return void callback(null, argv._);
-  child.exec("git ls-files --others --exclude-standard --directory -x '*/'", function(error, stdout, stderr) {
+  child.exec("git ls-files --others --exclude-standard --directory" + argv.exclude.map(function(x) { return " -x " + singlequote(x); }) + " -x '*/'", function(error, stdout, stderr) {
     if (!error && stderr) process.stderr.write(stderr), error = new Error("git ls-files failed.");
-    callback(error, error ? null : stdout.trim().split(os.EOL));
+    callback(error, error ? null : stdout.split(os.EOL).filter(Boolean));
   });
 }
 
@@ -179,8 +186,8 @@ function confirmFiles(files, callback) {
 
   var q = queue(1);
 
-  files.forEach(function(file, index) {
-    q.defer(confirmFile, file, index);
+  files.forEach(function(file) {
+    q.defer(confirmFile, file);
   });
 
   q.awaitAll(function(error) {
@@ -188,18 +195,18 @@ function confirmFiles(files, callback) {
     callback(error);
   });
 
-  function confirmFile(file, index, callback) {
+  function confirmFile(file, callback) {
     readin.question("add " + file + "? ", function(answer) {
       if (/^y|yes$/i.test(answer)) return void callback(null);
-      if (/^n|no$/i.test(answer)) return files.splice(index, 1), void callback(null);
-      confirmFile(file, index, callback);
+      if (/^n|no$/i.test(answer)) return files.splice(files.indexOf(file), 1), void callback(null);
+      confirmFile(file, callback);
     });
   }
 }
 
 function gitAdd(files, callback) {
   if (!files.length) return void callback(null);
-  child.exec("git add " + files.map(quote).join(" "), function(error, stdout, stderr) {
+  child.exec("git add " + files.map(doublequote).join(" "), function(error, stdout, stderr) {
     if (!error && stderr) process.stderr.write(stderr), error = new Error("git add failed.");
     if (!error && stdout) process.stdout.write(stdout);
     callback(error);
@@ -259,7 +266,7 @@ function createGist(token, callback) {
 }
 
 function gitRemoteAdd(id, callback) {
-  child.exec("git remote add --track master " + quote(argv.remote) + " git@gist.github.com:" + id + ".git", function(error, stdout, stderr) {
+  child.exec("git remote add --track master " + singlequote(argv.remote) + " git@gist.github.com:" + id + ".git", function(error, stdout, stderr) {
     if (!error && stderr) process.stderr.write(stderr), error = new Error("git remote failed.");
     if (!error && stdout) process.stdout.write(stdout);
     callback(error);
@@ -267,7 +274,7 @@ function gitRemoteAdd(id, callback) {
 }
 
 function gitPush(callback) {
-  child.exec("git push -fu " + quote(argv.remote) + " master", function(error, stdout, stderr) {
+  child.exec("git push -fu " + singlequote(argv.remote) + " master", function(error, stdout, stderr) {
     if (!error && stderr) process.stderr.write(stderr); // ignore warnings
     if (!error && stdout) process.stdout.write(stdout);
     callback(error);
@@ -276,7 +283,7 @@ function gitPush(callback) {
 
 function openBrowser(id, callback) {
   if (!argv.open) return void callback(null);
-  child.exec("open " + quote(argv.open) + id, function(error, stdout, stderr) {
+  child.exec("open " + singlequote(argv.open) + id, function(error, stdout, stderr) {
     if (!error && stderr) process.stderr.write(stderr); // ignore errors
     callback(null);
   });
@@ -288,7 +295,11 @@ function escape(string) {
   });
 }
 
-function quote(string) {
+function singlequote(string) {
+  return "'" + string.replace(/'/g, "'\\''") + "'";
+}
+
+function doublequote(string) {
   return '"' + string.replace(/(["\s'$`\\])/g, "\\$1") + '"';
 }
 
