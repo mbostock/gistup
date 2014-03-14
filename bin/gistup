@@ -222,7 +222,7 @@ function gitCommit(callback) {
 }
 
 function createGist(token, callback) {
-  var json = escape(JSON.stringify({
+  var json = JSON.stringify({
     "description": argv.description,
     "public": argv.public,
     "files": {
@@ -230,7 +230,7 @@ function createGist(token, callback) {
         "content": "gistup"
       }
     }
-  }));
+  });
 
   var request = https.request({
     hostname: "api.github.com",
@@ -242,7 +242,7 @@ function createGist(token, callback) {
       "Authorization": "token " + token,
       "User-Agent": "mbostock/gistup",
       "Content-Type": "application/json;charset=utf8",
-      "Content-Length": json.length
+      "Content-Length": Buffer.byteLength(json, "utf8")
     }
   }, function(response) {
     var chunks = [];
@@ -286,12 +286,6 @@ function openBrowser(id, callback) {
   child.exec("open " + singlequote(argv.open) + id, function(error, stdout, stderr) {
     if (!error && stderr) process.stderr.write(stderr); // ignore errors
     callback(null);
-  });
-}
-
-function escape(string) {
-  return string.replace(/[\u007f-\uffff]/g, function(character) {
-    return "\\u" + ("0000" + character.charCodeAt(0).toString(16)).slice(-4);
   });
 }
 
