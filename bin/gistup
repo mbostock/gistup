@@ -63,6 +63,8 @@ var argv = require("optimist").usage("Usage: \033[1mgistup\033[0m [options] -- [
     })
     .argv;
 
+var open = process.platform === "linux" ? "xdg-open" : "open";
+
 queue(1)
     .defer(getSettings)
     .defer(gitInit)
@@ -120,7 +122,7 @@ function getSettings(callback) {
     process.stdin.setRawMode(true);
     process.stdin.resume();
     process.stdin.once("data", function() {
-      child.exec("open 'https://github.com/settings/tokens/new'", function(error) {
+      child.exec(open + " 'https://github.com/settings/tokens/new'", function(error) {
         if (error) {
           argv.open = false;
           console.log("");
@@ -283,7 +285,7 @@ function gitPush(callback) {
 
 function openBrowser(id, callback) {
   if (!argv.open) return void callback(null);
-  child.exec("open " + singlequote(argv.open) + id, function(error, stdout, stderr) {
+  child.exec(open + " " + singlequote(argv.open) + id, function(error, stdout, stderr) {
     if (!error && stderr) process.stderr.write(stderr); // ignore errors
     callback(null);
   });
