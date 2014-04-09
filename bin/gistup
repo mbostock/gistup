@@ -67,15 +67,12 @@ var argv = optimist.usage("Usage: \033[1mgistup\033[0m [options] -- [file …]" 
     })
     .argv;
 
-var open = process.platform === "linux" ? "xdg-open" : "open";
-
 queue(1)
     .defer(getSettings)
     .defer(gitInit)
     .defer(gitRemoteDoesNotExist)
     .defer(gitListUntrackedFiles)
     .await(function(error, settings, _, _, files) {
-      if (!error && settings.open === false) argv.open = false;
       unless(error)
           .defer(confirmFiles, files)
           .defer(gitAdd, files)
@@ -85,7 +82,7 @@ queue(1)
             unless(error)
                 .defer(gitRemoteAdd, id)
                 .defer(gitPush)
-                .defer(openBrowser, id)
+                .defer(openBrowser, argv.open && settings.open, id)
                 .await(unless);
           });
     });
@@ -191,8 +188,8 @@ function gitPush(callback) {
   });
 }
 
-function openBrowser(id, callback) {
-  if (!argv.open) return void callback(null);
+function openBrowser(open, id, callback) {
+  if (!open) return void callback(null);
   child.exec(open + " " + quote.single(argv.open) + id, function(error, stdout, stderr) {
     if (!error && stderr) process.stderr.write(stderr); // ignore errors
     callback(null);
