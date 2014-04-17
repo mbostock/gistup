@@ -1,0 +1,63 @@
+#!/usr/bin/env node
+
+var os = require("os"),
+    path = require("path"),
+    child = require("child_process");
+
+var queue = require("queue-async"),
+    optimist = require("optimist");
+
+var quote = require("../lib/gistup/quote"),
+    getSettings = require("../lib/gistup/get-settings"),
+    unless = require("../lib/gistup/unless"),
+    api = require("../lib/gistup/api"),
+    UserError = require("../lib/gistup/user-error");
+
+var argv = optimist.usage("Usage: \033[1mgistup-open\033[0m" + os.EOL + os.EOL
+
++ "Version: " + require("../package.json").version + os.EOL + os.EOL
+
++ "Opens the gist in the current directory.")
+    .options("version", {
+      default: false,
+      describe: "print the current version of gistup"
+    })
+    .options("remote", {
+      default: "origin",
+      describe: "name of the git remote"
+    })
+    .options("help", {
+      alias: "h",
+      describe: "display this useful message"
+    })
+    .check(function(argv) {
+      if (argv.help) optimist.showHelp(), process.exit(0);
+      if (argv.version) console.log(require("../package.json").version), process.exit(0);
+    })
+    .argv;
+
+queue(1)
+    .defer(getSettings)
+    .defer(getGistId)
+    .await(function(error, settings, id) {
+      unless(error)
+          .defer(openGist, settings.open, id)
+          .await(unless);
+    });
+
+function getGistId(callback) {
+  child.exec("git config --get remote." + quote.single(argv.remote) + ".url", function(error, stdout, stderr) {
+    if (!error && stderr) process.stderr.write(stderr), error = new Error("git config failed.");
+    if (error) return void callback(error);
+    var match = /^git@gist\.github\.com:([0-9a-f]+)\.git$/.exec(stdout = stdout.trim());
+    if (!match) return void callback(new UserError("the remote \"" + argv.remote + "\" looks funny." + os.EOL + "I was expecting something like" + os.EOL + os.EOL + "  git@gist.github.com:123456789.git" + os.EOL + os.EOL + "but instead the remote URL is" + os.EOL + os.EOL + "  " + stdout + os.EOL + os.EOL + "so I’m giving up. Sorry."));
+    callback(null, match[1]);
+  });
+}
+
+function openGist(open, id, callback) {
+  child.exec(open + " https://gist.github.com/" + id, function(error, stdout, stderr) {
+    if (!error) console.log("gist " + id + " opened!");
+    callback(error);
+  });
+}

@@ -21,6 +21,7 @@
   },
   "bin": {
     "gistup": "./bin/gistup",
+    "gistup-open": "./bin/gistup-open",
     "gistup-rename": "./bin/gistup-rename"
   },
   "licenses": [
