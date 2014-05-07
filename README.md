@@ -26,7 +26,7 @@ If you just want to create a gist from a single file, try this instead:
 gistup index.html
 ```
 
-If you any specify options, such as a private gist, you must separate files from options with a double-dash (--) like this:
+If you specify any options, such as a private gist, you must separate files from options with a double-dash (--) like this:
 
 ```bash
 gistup --private -- index.html
