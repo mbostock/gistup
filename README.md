@@ -54,6 +54,8 @@ Arguments:
 * --help - show some help
 * --version - print the current version of gistup
 
+Use `gistup-rename "description of gist"` to update the description of the gist in the current directory and `gistup-open` to open it for viewing in your default browser.
+
 ## Troubleshooting
 
 If you see the following error:
