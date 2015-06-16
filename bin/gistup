@@ -167,7 +167,10 @@ function createGist(token, callback) {
   }, function(error, response) {
     var id = null;
     if (!error && !/^[0-9a-f]+$/i.test(id = response.id)) error = new Error("invalid gist id: " + id); // for safety
-    if (!error) console.log("gist " + id + " created!");
+    if (!error) {
+      console.log("gist " + id + " created!");
+      console.log(response.html_url);
+    }
     callback(error, id);
   });
 }
