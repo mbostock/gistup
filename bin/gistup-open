@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 
 var os = require("os"),
-    path = require("path"),
     child = require("child_process");
 
 var queue = require("queue-async"),
@@ -10,7 +9,6 @@ var queue = require("queue-async"),
 var quote = require("../lib/gistup/quote"),
     getSettings = require("../lib/gistup/get-settings"),
     unless = require("../lib/gistup/unless"),
-    api = require("../lib/gistup/api"),
     UserError = require("../lib/gistup/user-error");
 
 var argv = optimist.usage("Usage: \033[1mgistup-open\033[0m" + os.EOL + os.EOL
@@ -21,6 +19,10 @@ var argv = optimist.usage("Usage: \033[1mgistup-open\033[0m" + os.EOL + os.EOL
     .options("version", {
       default: false,
       describe: "print the current version of gistup"
+    })
+    .options("open", {
+      default: "https://gist.github.com/",
+      describe: "URL to open in your web browser after creating gist"
     })
     .options("remote", {
       default: "origin",
@@ -33,6 +35,7 @@ var argv = optimist.usage("Usage: \033[1mgistup-open\033[0m" + os.EOL + os.EOL
     .check(function(argv) {
       if (argv.help) optimist.showHelp(), process.exit(0);
       if (argv.version) console.log(require("../package.json").version), process.exit(0);
+      if (argv._.length) throw new Error("requires exactly zero arguments");
     })
     .argv;
 
@@ -41,7 +44,7 @@ queue(1)
     .defer(getGistId)
     .await(function(error, settings, id) {
       unless(error)
-          .defer(openGist, settings.open, id)
+          .defer(openBrowser, settings.open, id)
           .await(unless);
     });
 
@@ -55,9 +58,6 @@ function getGistId(callback) {
   });
 }
 
-function openGist(open, id, callback) {
-  child.exec(open + " https://gist.github.com/" + id, function(error, stdout, stderr) {
-    if (!error) console.log("gist " + id + " opened!");
-    callback(error);
-  });
+function openBrowser(open, id, callback) {
+  child.exec(open + " " + quote.single(argv.open) + id, callback);
 }

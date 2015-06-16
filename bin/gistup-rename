@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 
 var os = require("os"),
-    path = require("path"),
     child = require("child_process");
 
 var queue = require("queue-async"),
