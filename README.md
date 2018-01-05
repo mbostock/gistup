@@ -10,7 +10,7 @@ For more, read the tutorial: [Let’s Make a Block](http://bost.ocks.org/mike/bl
 npm install -g gistup
 ```
 
-The first time you run gistup, you’ll be prompted to create a GitHub *personal access token*. You can revoke the token in the future from your GitHub [application settings](https://github.com/settings/applications).
+The first time you run gistup, you’ll be prompted to create a GitHub *personal access token*. You can revoke the token in the future from your GitHub [developer settings](https://github.com/settings/tokens).
 
 ## Usage
 
