@@ -176,7 +176,7 @@ function createGist(token, callback) {
 }
 
 function gitRemoteAdd(id, callback) {
-  child.exec("git remote add --track master " + quote.single(argv.remote) + " git@gist.github.com:" + id + ".git", function(error, stdout, stderr) {
+  child.exec("git remote add --track main " + quote.single(argv.remote) + " git@gist.github.com:" + id + ".git", function(error, stdout, stderr) {
     if (!error && stderr) process.stderr.write(stderr), error = new Error("git remote failed.");
     if (!error && stdout) process.stdout.write(stdout);
     callback(error);
@@ -184,7 +184,7 @@ function gitRemoteAdd(id, callback) {
 }
 
 function gitPush(callback) {
-  child.exec("git push -fu " + quote.single(argv.remote) + " master", function(error, stdout, stderr) {
+  child.exec("git push -fu " + quote.single(argv.remote) + " main", function(error, stdout, stderr) {
     if (!error && stderr) process.stderr.write(stderr); // ignore warnings
     if (!error && stdout) process.stdout.write(stdout);
     callback(error);
